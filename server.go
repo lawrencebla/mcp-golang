@@ -1032,7 +1032,7 @@ var (
 		AllowAdditionalProperties:  true,
 		RequiredFromJSONSchemaTags: true,
 		DoNotReference:             true,
-		ExpandedStruct:             true,
+		// ExpandedStruct:             true,
 		FieldNameTag:               "",
 		IgnoredTypes:               nil,
 		Lookup:                     nil,
