@@ -180,7 +180,7 @@ func (p *Protocol) Connect(tr transport.Transport) error {
 		case m == transport.BaseMessageTypeJSONRPCRequestType:
 			p.handleRequest(ctx, message.JsonRpcRequest)
 		case m == transport.BaseMessageTypeJSONRPCNotificationType:
-			p.handleNotification(message.JsonRpcNotification)
+			p.handleNotification(ctx, message.JsonRpcNotification)
 		case m == transport.BaseMessageTypeJSONRPCResponseType:
 			p.handleResponse(message.JsonRpcResponse, nil)
 		case m == transport.BaseMessageTypeJSONRPCErrorType:
@@ -225,7 +225,7 @@ func (p *Protocol) handleError(err error) {
 	}
 }
 
-func (p *Protocol) handleNotification(notification *transport.BaseJSONRPCNotification) {
+func (p *Protocol) handleNotification(ctx context.Context, notification *transport.BaseJSONRPCNotification) {
 	p.mu.RLock()
 	handler := p.notificationHandlers[notification.Method]
 	if handler == nil {
@@ -240,6 +240,18 @@ func (p *Protocol) handleNotification(notification *transport.BaseJSONRPCNotific
 	go func() {
 		if err := handler(notification); err != nil {
 			p.handleError(fmt.Errorf("notification handler error: %w", err))
+		} else {				
+			if err := p.transport.Send(ctx, &transport.BaseJsonRpcMessage{
+				Type: transport.BaseMessageTypeJSONRPCNotificationType,
+				JsonRpcResponse: &transport.BaseJSONRPCResponse{
+					Id:      0,
+					Jsonrpc: "2.0",
+					Result:  json.RawMessage([]byte("null")),
+				},
+			}); err != nil {
+				println("error:", err.Error())
+				p.handleError(fmt.Errorf("failed to send response: %w", err))
+			}
 		}
 	}()
 }
